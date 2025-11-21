@@ -1,4 +1,6 @@
-#include <windows.h>
+#include "WindowHandler/WindowHandler.h"
+
+#include <Windows.h>
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMSG, WPARAM wparam,
                             LPARAM lparam) {
@@ -7,16 +9,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMSG, WPARAM wparam,
     PostQuitMessage(0);
     return 0;
 
-  case WM_PAINT: {
-    PAINTSTRUCT ps;
-    HDC hdc = BeginPaint(hwnd, &ps);
-
-    const char *text = "Tasknet Core UI";
-    TextOutA(hdc, 10, 10, text, lstrlenA(text));
-
-    EndPaint(hwnd, &ps);
+  case WM_HOTKEY:
+    PostQuitMessage(0);
     return 0;
-  }
   default:
     break;
   }
@@ -24,43 +19,32 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMSG, WPARAM wparam,
   return DefWindowProc(hwnd, uMSG, wparam, lparam);
 }
 
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                     LPSTR lpCmdLine, int nCmdShow) {
-  (void)hPrevInstance;
-  (void)lpCmdLine;
-
-  constexpr char ClASS_NAME[] = "Taskent window class";
-
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
+  constexpr char CLASS_NAME[] = "HiddenClass";
   WNDCLASSA wc = {};
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = hInstance;
-  wc.lpszClassName = ClASS_NAME;
-  wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  wc.lpszClassName = CLASS_NAME;
 
-  if (!RegisterClassA(&wc)) {
-    MessageBoxA(nullptr, "Failed to register window class.", "Error",
+  if (!RegisterClass(&wc)) {
+    MessageBoxA(nullptr, "Failed to register window class", "ERROR",
                 MB_ICONERROR);
     return 1;
   }
 
-  HWND hwnd = CreateWindowExA(0, ClASS_NAME, "Tasknet", WS_OVERLAPPEDWINDOW,
-                              CW_USEDEFAULT, CW_USEDEFAULT, 400, 400, nullptr,
-                              nullptr, hInstance, nullptr);
-
+  HWND hwnd = CreateWindowEx(0, CLASS_NAME, "", 0, 0, 0, 0, 0, nullptr, nullptr,
+                             hInstance, nullptr);
   if (hwnd == nullptr) {
-    MessageBoxA(nullptr, "Failed to create window.", "Error", MB_ICONERROR);
-    return 1;
+    return -1;
   }
 
-  ShowWindow(hwnd, nCmdShow);
-  UpdateWindow(hwnd);
-
-  MSG msg = {};
+  RegisterHotKey(hwnd, 2, MOD_WIN | MOD_SHIFT, 'Q');
+  MSG msg;
+  WindowHandler window_handler = WindowHandler(hInstance, nCmdShow);
   while (GetMessage(&msg, nullptr, 0, 0) > 0) {
     TranslateMessage(&msg);
     DispatchMessage(&msg);
   }
-
-  return (int)msg.wParam;
+  UnregisterHotKey(hwnd, 2);
+  return 0;
 }
