@@ -8,6 +8,11 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+struct WindowProps {
+  HWND hwnd_;
+  int nCmdShow_;
+  bool bVisible = false;
+};
 class WindowHandler {
 public:
   WindowHandler(HINSTANCE hInstance, int nCmdShow);
@@ -15,11 +20,11 @@ public:
 
 private:
   bool bIsWindowHidden;
-  HWND hwnd_;
-  int nCmdShow_;
   HWND searchBarWinHWND = nullptr;
   static LRESULT SearchBarWinProc(HWND hwnd, UINT uMsg, WPARAM wparam,
                                   LPARAM lparam);
+
+  WindowProps props;
 };
 
 #endif // TASKNET_WINDOWHANDLER_H

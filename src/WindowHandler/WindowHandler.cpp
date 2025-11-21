@@ -25,28 +25,25 @@ WindowHandler::WindowHandler(HINSTANCE hInstance, int nCmdShow) {
     std::throw_with_nested("Failed to create window class");
   }
 
-  HWND hwnd =
-      CreateWindowExA(WS_EX_LAYERED | WS_EX_NOREDIRECTIONBITMAP |
-                          WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
-                      ClASS_NAME, "Tasknet", WS_POPUP | WS_VISIBLE, 2160, 520,
-                      800, 400, nullptr, nullptr, hInstance, nullptr);
+  HWND hwnd = CreateWindowExA(WS_EX_LAYERED | WS_EX_NOREDIRECTIONBITMAP |
+                                  WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+                              ClASS_NAME, "Tasknet", WS_POPUP, 2160, 520, 800,
+                              400, nullptr, nullptr, hInstance, &props);
 
   if (hwnd == nullptr) {
     MessageBoxA(nullptr, "Failed to create window.", "Error", MB_ICONERROR);
     std::throw_with_nested("Failed to create window");
   }
-  hwnd_ = hwnd;
-  nCmdShow_ = nCmdShow;
+  props.hwnd_ = hwnd;
+  props.nCmdShow_ = nCmdShow;
 
-  int res = RegisterHotKey(hwnd, 1, MOD_WIN | MOD_SHIFT, 'K');
-  std::cout << "Hotkey registered" << res << std::endl;
-  ShowWindow(hwnd, nCmdShow);
-  UpdateWindow(hwnd);
+  RegisterHotKey(hwnd, 1, MOD_WIN | MOD_SHIFT, 'K');
 }
-WindowHandler::~WindowHandler() { UnregisterHotKey(hwnd_, 1); }
+WindowHandler::~WindowHandler() { UnregisterHotKey(props.hwnd_, 1); }
 
 LRESULT WindowHandler::SearchBarWinProc(HWND hwnd, UINT uMsg, WPARAM wparam,
                                         LPARAM lparam) {
+  WindowProps *pState;
   switch (uMsg) {
   case WM_CREATE: {
     DWM_BLURBEHIND bb = {0};
@@ -55,11 +52,22 @@ LRESULT WindowHandler::SearchBarWinProc(HWND hwnd, UINT uMsg, WPARAM wparam,
     bb.hRgnBlur = nullptr;
     HRESULT res = DwmEnableBlurBehindWindow(hwnd, &bb);
     std::cout << res << std::endl;
+
+    CREATESTRUCT *pCreate = reinterpret_cast<CREATESTRUCT *>(lparam);
+    pState = reinterpret_cast<WindowProps *>(pCreate->lpCreateParams);
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pState);
     break;
   }
   case WM_HOTKEY: {
-    // WindowHandler();
-    MessageBeep(MB_ICONERROR); // TODO: Replace
+    LONG_PTR ptr = GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    pState = reinterpret_cast<WindowProps *>(ptr);
+    pState->bVisible ^= true;
+    if (pState->bVisible) {
+      ShowWindow(pState->hwnd_, pState->nCmdShow_);
+      UpdateWindow(pState->hwnd_);
+    } else {
+      ShowWindow(pState->hwnd_, SW_HIDE);
+    }
     break;
   }
   case WM_DESTROY:
